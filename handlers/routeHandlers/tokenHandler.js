@@ -85,18 +85,21 @@ handler._token.post = (requestProperties, callback) => {
 
 handler._token.put = (requestProperties, callback) => {
     // check the token id is valid
-    const id = typeof (requestProperties.queryStringObject.id) === 'string' && requestProperties.queryStringObject.id.trim().length === 20 ? requestProperties.queryStringObject.id : false;
+    const id = typeof (requestProperties.body.id) === 'string' && requestProperties.body.id.trim().length === 20 ? requestProperties.body.id.trim() : false;
 
-    const extend = typeof (requestProperties.queryStringObject.extend) === 'boolean' && requestProperties.queryStringObject.extend === true ? true : false;
+    const extend = typeof (requestProperties.body.extend) === 'boolean' && requestProperties.body.extend === true ? true : false;
 
     if (id && extend) {
+        //console.log('PUT request body:', requestProperties.body);
+        console.log('Parsed ID:', id);
+        console.log('Parsed Extend:', extend);
         data.read('tokens', id, (err, tokenData) => {
-            let tokenObject = parseJSON(tokenData);
-            if (tokenObject.expires > Date.now()) {
+            const tokenObject = parseJSON(tokenData);
+            if (!err && tokenObject.expires > Date.now()) {
                 tokenObject.expires = Date.now() + 60 * 60 * 1000;
 
                 // store the updated token
-                data.update('tokens', id, (err) => {
+                data.update('tokens', id, tokenObject, (err) => {
                     if (!err) {
                         callback(200, {
                             message: 'Token updated successfully.',
@@ -122,7 +125,48 @@ handler._token.put = (requestProperties, callback) => {
 };
 
 handler._token.delete = (requestProperties, callback) => {
+    const id = typeof (requestProperties.queryStringObject.id) === 'string' && requestProperties.queryStringObject.id.trim().length === 20 ? requestProperties.queryStringObject.id : false;
 
+    if (id) {
+        data.read('tokens', id, (err, tokenData) => {
+            if (!err && tokenData) {
+                data.delete('tokens', id, (err) => {
+                    if (!err) {
+                        callback(200, {
+                            message: 'Token deleted successfully.',
+                        })
+                    } else {
+                        callback(500, {
+                            error: 'There was server side error when deleting tokens.!',
+                        })
+                    }
+                })
+            } else {
+                callback(500, {
+                    error: 'There was server side error!',
+                })
+            }
+        })
+
+    } else {
+        callback(400, {
+            error: 'You have a problem in request!',
+        })
+    }
 };
+
+handler._token.verify = (id, phone, callback) => {
+    data.read('tokens', id, (err, tokenData) => {
+        if (!err && tokenData) {
+            if (parseJSON(tokenData).phone === phone && parseJSON(tokenData).expires > Date.now()) {
+                callback(true);
+            } else {
+                callback(false);
+            }
+        } else {
+            callback(false);
+        }
+    })
+}
 
 module.exports = handler;

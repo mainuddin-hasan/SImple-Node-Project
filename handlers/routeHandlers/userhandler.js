@@ -4,6 +4,7 @@
 const data = require('../../lib/data');
 const {hash} = require('../../helpers/utilities')
 const {parseJSON} = require('../../helpers/utilities')
+const tokenHandler = require('./tokenHandler');
 
 const handler = {};
 
@@ -23,17 +24,32 @@ handler._user.get = (requestProperties, callback) => {
     const phone = typeof (requestProperties.queryStringObject.phone) === 'string' && requestProperties.queryStringObject.phone.trim().length === 11 ? requestProperties.queryStringObject.phone : false;
 
     if (phone) {
-        data.read('users', phone, (err, userData) => {
-            if (!err && userData) {
-                const data = {...parseJSON(userData)};
-                delete data.password;
-                callback(200, data);
+
+        const token = typeof (requestProperties.headersObject.token) === 'string' ? requestProperties.headersObject.token : false;
+
+        tokenHandler._token.verify(token, phone, (tokenId) => {
+            console.log('token : ' + token);
+            console.log('Phone : ' + phone);
+            console.log('token Id : ' + tokenId);
+            if (tokenId) {
+                data.read('users', phone, (err, userData) => {
+                    if (!err && userData) {
+                        const data = {...parseJSON(userData)};
+                        delete data.password;
+                        callback(200, data);
+                    } else {
+                        callback(404, {
+                            error: 'request user not found',
+                        })
+                    }
+                })
             } else {
-                callback(404, {
-                    error: 'request user not found',
+                callback(403, {
+                    error: 'Authentication failed',
                 })
             }
         })
+
     } else {
         callback(404, {
             error: 'Request user not found',
@@ -100,39 +116,55 @@ handler._user.put = (requestProperties, callback) => {
 
     if (phone) {
         if (firstName || lastName || password) {
-            data.read('users', phone, (err, uData) => {
 
-                const userData = {...parseJSON(uData)};
+            const token = typeof (requestProperties.headersObject.token) === 'string' ? requestProperties.headersObject.token : false;
 
-                if (!err && userData) {
-                    if (firstName) {
-                        userData.firstName = firstName;
-                    }
-                    if (lastName) {
-                        userData.lastName = lastName;
-                    }
-                    if (password) {
-                        userData.password = hash(password);
-                    }
+            tokenHandler._token.verify(token, phone, (tokenId) => {
+                console.log('token : ' + token);
+                console.log('Phone : ' + phone);
+                console.log('token Id : ' + tokenId);
+                if (tokenId) {
+                    // lookup the user
+                    data.read('users', phone, (err, uData) => {
 
-                    // store data in db
-                    data.update('users', phone, userData, (err) => {
-                        if (!err) {
-                            callback(200, {
-                                message: 'user updated successfully',
+                        const userData = {...parseJSON(uData)};
+
+                        if (!err && userData) {
+                            if (firstName) {
+                                userData.firstName = firstName;
+                            }
+                            if (lastName) {
+                                userData.lastName = lastName;
+                            }
+                            if (password) {
+                                userData.password = hash(password);
+                            }
+
+                            // store data in db
+                            data.update('users', phone, userData, (err) => {
+                                if (!err) {
+                                    callback(200, {
+                                        message: 'user updated successfully',
+                                    })
+                                } else {
+                                    callback(500, {
+                                        error: 'There was a problem in server side',
+                                    })
+                                }
                             })
                         } else {
-                            callback(500, {
-                                error: 'There was a problem in server side',
+                            callback(400, {
+                                error: 'file not exist'
                             })
                         }
                     })
                 } else {
-                    callback(400, {
-                        error: 'file not exist'
+                    callback(403, {
+                        error: 'Authentication failed',
                     })
                 }
             })
+
         } else {
             callback(400, {
                 error: 'Please give the update field what you want to update',
