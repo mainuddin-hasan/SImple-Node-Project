@@ -3,12 +3,26 @@ const environments = {};
 environments.staging = {
     port: 3000,
     envName: 'staging',
-    secretKey: 'aaabcdefghabcdefgh'
+    secretKey: 'aaabcdefghabcdefgh',
+    maxChecks: 5,
+    twilio: {
+        fromPhone: '',
+        accountSid: '',
+        authToken: '',
+    }
+
 };
 environments.production = {
     port: 4000,
     envName: 'production',
-    secretKey: 'aaabcdefghiabcdefghi'
+    secretKey: 'aaabcdefghiabcdefghi',
+    maxChecks: 5,
+    twilio: {
+        fromPhone: '',
+        accountSid: '',
+        authToken: '',
+    }
+
 };
 
 const currentEnvironment = typeof (process.env.NODE_ENV) === 'string' ? process.env.NODE_ENV : 'staging';

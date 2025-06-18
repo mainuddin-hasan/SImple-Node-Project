@@ -1,30 +1,19 @@
 // dependencies
-const http = require('http');
-const {handleReqRes} = require('./helpers/handleReqRes');
-const environment = require('./helpers/environments');
-const data = require('./lib/data')
+const server = require('./lib/server');
+const workers = require('./lib/workers');
+
 
 // app object - module scaffolding
 const app = {};
 
-// testing file system
-// todo pore muche dibo
-data.update('test', 'newFile', {name:'Englad', language:'English'}, (err) =>{
-    console.log(err);
-});
+app.init = () => {
+    // start the server
+    server.init();
 
-// create server
-app.createServer = () => {
-    const server = http.createServer(app.handleReqRes);
-    server.listen(environment.port, () => {
-        console.log(`Server started on port ${environment.port}`);
-    })
+    // start the workers
+    workers.init();
+
 }
+app.init();
 
-
-app.handleReqRes = handleReqRes;
-
-
-// start the server
-
-app.createServer();
+module.exports = app;
